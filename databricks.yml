@@ -1,0 +1,69 @@
+bundle:
+  name: aml-lakehouse
+
+variables:
+  cluster_id:
+    description: Cluster the jobs run on
+
+resources:
+  jobs:
+    aml_bronze_stream:
+      name: aml-bronze-stream
+      tasks:
+        - task_key: bronze
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ./notebooks/01_bronze_stream.py
+
+    aml_silver_stream:
+      name: aml-silver-stream
+      tasks:
+        - task_key: silver
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ./notebooks/02_silver_stream.py
+
+    aml_screening_daily:
+      name: aml-screening-daily
+      schedule:
+        quartz_cron_expression: "0 0 6 * * ?"
+        timezone_id: Asia/Kolkata
+      tasks:
+        - task_key: screen
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ./notebooks/03_screening_batch.py
+        - task_key: reconcile
+          depends_on:
+            - task_key: screen
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ./notebooks/07_reconciliation.py
+
+    aml_rules_stream:
+      name: aml-rules-stream
+      tasks:
+        - task_key: rules
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ./notebooks/04_rules_stream.py
+
+    aml_gold_alerts:
+      name: aml-gold-alerts
+      tasks:
+        - task_key: alerts
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ./notebooks/05_gold_alerts.py
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://<your-workspace>.azuredatabricks.net
+
+  prod:
+    mode: production
+    workspace:
+      host: https://<your-workspace>.azuredatabricks.net

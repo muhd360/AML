@@ -1,0 +1,6 @@
+pyspark==3.5.0
+pytest
+rapidfuzz
+faker
+confluent-kafka
+databricks-sdk
